@@ -1,0 +1,24 @@
+name: Build IPA
+on: [push, workflow_dispatch]
+jobs:
+  ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Arrange files
+        run: |
+          mkdir -p Sources/Assets.xcassets/AppIcon.appiconset
+          mv SuperGo.swift blocklist-*.json Sources/
+          mv icon.png Sources/Assets.xcassets/AppIcon.appiconset/
+          echo '{"images":[{"filename":"icon.png","idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}' > Sources/Assets.xcassets/AppIcon.appiconset/Contents.json
+          echo '{"info":{"author":"xcode","version":1}}' > Sources/Assets.xcassets/Contents.json
+      - name: Build unsigned
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -project SuperGo.xcodeproj -scheme SuperGo -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/SUPERGO.app Payload/
+          zip -qr SUPERGO.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with: {name: SUPERGO-ipa, path: SUPERGO.ipa}
